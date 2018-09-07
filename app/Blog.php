@@ -12,4 +12,12 @@ class Blog extends Model
     public function comments(){
         return $this->hasMany(Comment::class);
     }
+    public function addIt($body){
+        Comment::create([
+            'blog_id' => $this->id,
+            'body' => $body,
+            'user_id' => auth()->id(),
+            'user_name' => auth()->user()->name    
+       ]);
+    }
 }

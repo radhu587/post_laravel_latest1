@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Blog;
 use App\User;
 use App\Comment;
+use Carbon\Carbon;
 
 class HomeController extends Controller
 {
@@ -27,9 +28,25 @@ class HomeController extends Controller
      */
     public function index()
     {
-    $take1 = Blog::orderBy('created_at','desc')->get();
+    $take1 = Blog::orderBy('created_at','desc');
+
     $take = Comment::get();
-      return view('home',compact('take','take1'));
+    if($month = request('month')){
+        $take1->whereMonth('created_at',Carbon::parse($month));
+    }
+
+    if($year = request('year')){
+        $take1->whereYear('created_at',$year);
+    }
+
+    $take1 = $take1->get();
+
+    $archives = Blog::selectRaw('year(created_at) year,monthname(created_at) month, count(*) published')
+    ->orderByRaw('min(created_at) desc')
+    ->groupBy('year','month')
+    ->get();
+
+    return view('home',compact('take','take1','archives'));
     }
 
     public function build($id){
@@ -78,16 +95,11 @@ class HomeController extends Controller
         $take = '/home/showMyPost/'.$make2;
         return redirect($take);
     }
-    public function addComment($id){
+    public function addComment(Blog $blog){
         $this->validate(request(),[
             'commentBody' => 'required'
         ]);
-        Comment::create([
-             'blog_id' => $id,
-             'body' => request('commentBody'),
-             'user_id' => auth()->id(),
-             'user_name' => auth()->user()->name
-        ]);
+        $blog->addIt(request('commentBody'));
         return redirect('/home');
     }
 }
